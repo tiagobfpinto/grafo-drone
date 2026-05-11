@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <title>Grafo de Cena - Drone</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #111;
+      font-family: Arial, sans-serif;
+    }
+
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      background: rgba(0, 0, 0, 0.55);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.45;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="info">
+    <strong>Controlos</strong><br>
+    Mouse: rodar / zoom / mover camara<br>
+    W / S: frente / tras<br>
+    A / D: esquerda / direita<br>
+    Q / E: virar esquerda / direita<br>
+    Espaco / Shift: subir / descer<br>
+    R / F: ligar / desligar<br>
+    <span id="drone-status">Estado: ligado</span>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
