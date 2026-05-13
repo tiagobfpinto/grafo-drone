@@ -33,6 +33,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
 const droneStatusElement = document.getElementById("drone-status");
+const axesStatusElement = document.getElementById("axes-status");
 
 function updateDroneStatus(){
     if(!droneStatusElement){
@@ -40,6 +41,13 @@ function updateDroneStatus(){
     }
 
     droneStatusElement.textContent = droneLigado ? "Estado: ligado" : "Estado: desligado";
+}
+function updateAxesStatus(){
+    if(!axesStatusElement){
+        return;
+    }
+
+    axesStatusElement.textContent = axesVisiveis ? "Eixos: ligados" : "Eixos: desligados";
 }
 
 // Cubo
@@ -128,6 +136,7 @@ const inverseDroneRigQuaternion = new THREE.Quaternion();
 let verticalVelocity = 0;
 let yawVelocity = 0;
 let droneLigado = true;
+let axesVisiveis = true;
 let propellerCurrentSpeed = 0;
 
 function createChamferedBoxGeometry(width, height, depth, chamfer){
@@ -369,6 +378,43 @@ drone.add(backRightArm);
 droneRig.add(drone);
 scene.add(droneRig);
 
+// --- TAREFA 3: BALÕES (Código Mínimo) ---
+const balloonHelpers = [];
+const balloonMat = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: false });
+
+for (let i = 0; i < 4; i++) { // Pelo menos 4 balões
+    const balloon = new THREE.Group();
+
+    // 1. Corpo (Esfera low-poly)
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 6), balloonMat);
+    
+    // 2. Nó (Cone)
+    const knot = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.1, 8), balloonMat);
+    knot.position.y = -0.34; // Encostado à base da esfera
+    
+    // 3. Fio (Cilindro fininho)
+    const string = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 1.2, 4), balloonMat);
+    string.position.y = -0.99; // Abaixo do nó
+
+    // Adicionar AxesHelper a cada peça
+    const hBody = new THREE.AxesHelper(0.4); body.add(hBody);
+    const hKnot = new THREE.AxesHelper(0.2); knot.add(hKnot);
+    const hString = new THREE.AxesHelper(0.2); string.add(hString);
+    balloonHelpers.push(hBody, hKnot, hString);
+
+    // Juntar tudo no grupo do balão
+    balloon.add(body, knot, string);
+
+    // Posição aleatória (Y > 3 garante que fica acima do DroneWatch)
+    balloon.position.set(
+        (Math.random() - 0.5) * 8, // X aleatório
+        3 + Math.random() * 3,     // Y aleatório alto
+        (Math.random() - 0.5) * 8  // Z aleatório
+    );
+    scene.add(balloon);
+}
+// ----------------------------------------
+
 
 //handle de controlos do drone 
 const keys = {
@@ -379,7 +425,8 @@ const keys = {
     yawLeft:false,
     yawRight:false,
     up:false,
-    down:false
+    down:false,
+    showAxes: true
 };
 
 function setDroneKey(event, isPressed){
@@ -421,6 +468,19 @@ function setDroneKey(event, isPressed){
             if(isPressed){
                 droneLigado = false;
                 updateDroneStatus();
+            }
+            break;
+        case "KeyH":
+            if(isPressed){
+                axesVisiveis = !axesVisiveis;
+                
+                // Aplicar a visibilidade ao helper principal
+                axesHelper.visible = axesVisiveis;
+                
+                // Aplicar a visibilidade aos helpers dos balões (da Tarefa 3)
+                balloonHelpers.forEach(h => h.visible = axesVisiveis);
+                
+                updateAxesStatus();
             }
             break;
         default:
@@ -528,4 +588,5 @@ function animate() {
 }
 
 updateDroneStatus();
+updateAxesStatus();
 animate();
