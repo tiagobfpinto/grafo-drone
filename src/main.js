@@ -8,7 +8,7 @@ import { createStrap } from './strap.js';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x2b2b2b);
 
-const axesHelper = new THREE.AxesHelper(3);
+const axesHelper = new THREE.AxesHelper(0.8);
 scene.add(axesHelper);
 
 // Renderer
@@ -50,12 +50,11 @@ const far = 150;
 const sceneBounds = new THREE.Box3();
 const sceneCenter = new THREE.Vector3();
 const sceneSize = new THREE.Vector3();
-const cameraHelpers = [];
 const cameraForward = new THREE.Vector3(0, 0, -1);
 const mobileCameraDirection = new THREE.Vector3(0, -0.12, 1).normalize();
 
 let activeCamera = null;
-let helpersVisible = true;
+let helpersVisible = false;
 let wireframeVisible = false;
 
 sceneBounds.expandByObject(drone.rig);
@@ -148,14 +147,15 @@ cameras.mobilePerspective.lookAt(drone.rig.position);
 
 Object.values(cameras).forEach((camera) => {
     updateCameraProjection(camera);
-
-    const helper = new THREE.CameraHelper(camera);
-    helper.visible = helpersVisible;
-    scene.add(helper);
-    cameraHelpers.push(helper);
 });
 
 activeCamera = cameras.top;
+
+const controls = new OrbitControls(cameras.fixedPerspective, renderer.domElement);
+controls.target.copy(sceneCenter);
+controls.enabled = false;
+controls.enableDamping = true;
+controls.update();
 
 const cameraShortcuts = new Map([
     ["Digit1", cameras.top],
@@ -193,25 +193,7 @@ window.addEventListener("keydown", (event) => {
 
     if(event.code === "KeyH" && !event.repeat){
         helpersVisible = !helpersVisible;
-        axesHelper.visible = helpersVisible;
-        cameraHelpers.forEach((helper) => {
-            helper.visible = helpersVisible;
-        });
-        if(drone.setDebugHelpersVisible) {
-            drone.setDebugHelpersVisible(helpersVisible);
-        }
-        if (typeof balloonHelpers !== 'undefined') {
-            balloonHelpers.forEach((helper) => {
-                helper.visible = helpersVisible;
-            });
-        }
-        if (typeof strapHelpers !== 'undefined') {
-            strapHelpers.forEach(h => h.visible = helpersVisible);
-        }
-        const axesStatusElement = document.getElementById("axes-status");
-        if(axesStatusElement) {
-            axesStatusElement.textContent = helpersVisible ? "Eixos: ligados" : "Eixos: desligados";
-        }
+        setHelpersVisible(helpersVisible);
         event.preventDefault();
         return;
     }
@@ -236,9 +218,29 @@ window.addEventListener("keydown", (event) => {
     }
 });
 
+function setHelpersVisible(visible){
+    axesHelper.visible = visible;
+    if(drone.setDebugHelpersVisible) {
+        drone.setDebugHelpersVisible(visible);
+    }
+    if (typeof balloonHelpers !== 'undefined') {
+        balloonHelpers.forEach((helper) => {
+            helper.visible = visible;
+        });
+    }
+    if (typeof strapHelpers !== 'undefined') {
+        strapHelpers.forEach(h => h.visible = visible);
+    }
+    const axesStatusElement = document.getElementById("axes-status");
+    if(axesStatusElement) {
+        axesStatusElement.textContent = visible ? "Eixos: ligados" : "Eixos: desligados";
+    }
+}
+
+setHelpersVisible(helpersVisible);
+
 window.addEventListener("resize", () => {
     Object.values(cameras).forEach(updateCameraProjection);
-    cameraHelpers.forEach((helper) => helper.update());
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
@@ -250,7 +252,7 @@ function animate() {
 
     const delta = clock.getDelta();
     drone.update(delta, clock.elapsedTime);
-    cameraHelpers.forEach((helper) => helper.update());
+    controls.update();
 
     renderer.render(scene, activeCamera);
 }
