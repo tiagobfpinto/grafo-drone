@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import { createBalloon } from './baloon.js';
-import { createDrone } from './drone.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { createDrone } from './drone.js';
+import { createBalloon } from './baloon.js';
+import { createStrap } from './strap.js';
 
 // Cena
 const scene = new THREE.Scene();
@@ -36,6 +37,12 @@ for (let i = 0; i < 5; i++) {
     scene.add(balloonData.group);
     balloons.push(balloonData.group); 
 }
+
+//Strap
+const strapData = createStrap();
+strapData.group.position.set(0, -0.4, 0); 
+scene.add(strapData.group); 
+const strapHelpers = strapData.helpers;
 
 // Camaras
 const near = 0.1;
@@ -187,6 +194,9 @@ window.addEventListener("keydown", (event) => {
             balloonHelpers.forEach((helper) => {
                 helper.visible = helpersVisible;
             });
+        }
+        if (typeof strapHelpers !== 'undefined') {
+            strapHelpers.forEach(h => h.visible = helpersVisible);
         }
         const axesStatusElement = document.getElementById("axes-status");
         if(axesStatusElement) {

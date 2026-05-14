@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 // Materiais
 const droneBodyMaterial = new THREE.MeshBasicMaterial({
-    color: 0x646a70,
+    color: 0xFF007F,
     wireframe: false
 });
 
