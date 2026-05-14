@@ -97,8 +97,7 @@ const armSocketLength = 0.2;
 const armThickness = 0.075;
 const sleeveLength = 0.34;
 const slideLength = 0.38;
-const slideRetractedOffset = -0.06;
-const slideExpandedOffset = 0.68;
+const slideExpandedOffset = 0.2;
 const rotorRadius = 0.25;
 const rotorTubeRadius = 0.045;
 const rotorGap = 0.14;
@@ -330,7 +329,7 @@ function createDeployableArm(config, propellers, debugHelpers){
     sleeve.position.x = armSocketLength + sleeveLength / 2;
 
     const slideGroup = new THREE.Group();
-    slideGroup.position.x = armSocketLength + slideRetractedOffset;
+    slideGroup.position.x = armSocketLength + slideExpandedOffset;
 
     const slide = new THREE.Mesh(
         new THREE.BoxGeometry(slideLength, armThickness * 0.72, armThickness * 0.72),
@@ -372,7 +371,7 @@ function createDeployableArm(config, propellers, debugHelpers){
         root: arm,
         slideGroup,
         baseAngle: config.angle,
-        foldOffset: config.foldOffset
+        foldedAngle: config.angle + Math.PI
     };
 }
 
@@ -557,29 +556,25 @@ export function createDrone(options = {}){
             name: "front-right-arm",
             labelIndex: 2,
             position: new THREE.Vector3(bodyWidth / 2 - armSocketInset, 0, bodyDepth / 2 - armSocketInset),
-            angle: -Math.PI / 4,
-            foldOffset: 0.15
+            angle: -Math.PI / 4
         },
         {
             name: "front-left-arm",
             labelIndex: 4,
             position: new THREE.Vector3(-bodyWidth / 2 + armSocketInset, 0, bodyDepth / 2 - armSocketInset),
-            angle: -3 * Math.PI / 4,
-            foldOffset: -0.15
+            angle: -3 * Math.PI / 4
         },
         {
             name: "back-left-arm",
             labelIndex: 1,
             position: new THREE.Vector3(-bodyWidth / 2 + armSocketInset, 0, -bodyDepth / 2 + armSocketInset),
-            angle: 3 * Math.PI / 4,
-            foldOffset: 0.15
+            angle: 3 * Math.PI / 4
         },
         {
             name: "back-right-arm",
             labelIndex: 3,
             position: new THREE.Vector3(bodyWidth / 2 - armSocketInset, 0, -bodyDepth / 2 + armSocketInset),
-            angle: Math.PI / 4,
-            foldOffset: -0.15
+            angle: Math.PI / 4
         }
     ];
 
@@ -609,7 +604,6 @@ export function createDrone(options = {}){
     const inverseDroneRigQuaternion = new THREE.Quaternion();
     let verticalVelocity = 0;
     let yawVelocity = 0;
-    let ligado = true;
     let armsExpanded = true;
     let armExtension = 1;
     let propellerCurrentSpeed = 0;
@@ -621,7 +615,7 @@ export function createDrone(options = {}){
             speed: droneVelocity.length(),
             verticalSpeed: verticalVelocity,
             yawSpeed: yawVelocity,
-            ligado,
+            ligado: armsExpanded,
             armsExpanded,
             armExtension
         };
@@ -629,20 +623,16 @@ export function createDrone(options = {}){
 
     function updateStatus(){
         if(!statusElement) return;
-        const droneState = ligado ? "ligado" : "desligado";
+        const droneState = armsExpanded ? "ligado" : "desligado";
         const armState = armsExpanded ? "expandidos" : "retraidos";
         statusElement.textContent = `Estado: ${droneState} | Bracos: ${armState}`;
     }
 
     function updateArmTransforms(){
         deployableArms.forEach((arm) => {
-            arm.slideGroup.position.x = THREE.MathUtils.lerp(
-                armSocketLength + slideRetractedOffset,
-                armSocketLength + slideExpandedOffset,
-                armExtension
-            );
+            arm.slideGroup.position.x = armSocketLength + slideExpandedOffset;
             arm.root.rotation.y = THREE.MathUtils.lerp(
-                arm.baseAngle + arm.foldOffset,
+                arm.foldedAngle,
                 arm.baseAngle,
                 armExtension
             );
@@ -683,18 +673,6 @@ export function createDrone(options = {}){
                     toggleArms();
                 }
                 break;
-            case "KeyR":
-                if(isPressed){
-                    ligado = true;
-                    updateStatus();
-                }
-                break;
-            case "KeyF":
-                if(isPressed){
-                    ligado = false;
-                    updateStatus();
-                }
-                break;
             default:
                 handled = false;
         }
@@ -724,7 +702,7 @@ export function createDrone(options = {}){
         const maxRoll = 0.28;
         const yawRollAmount = 0.14;
         const tiltResponse = 5.5;
-        const targetPropellerSpeed = ligado ? 22 : 0;
+        const targetPropellerSpeed = armsExpanded ? 22 : 0;
         const armTarget = armsExpanded ? 1 : 0;
 
         armExtension = THREE.MathUtils.damp(armExtension, armTarget, 7, delta);
@@ -732,7 +710,7 @@ export function createDrone(options = {}){
 
         propellerCurrentSpeed += (targetPropellerSpeed - propellerCurrentSpeed) * Math.min(delta * 5, 1);
 
-        if(ligado){
+        if(armsExpanded){
             const yawInput = Number(keys.yawLeft) - Number(keys.yawRight);
             yawVelocity += yawInput * yawAcceleration * delta;
             yawVelocity = THREE.MathUtils.clamp(yawVelocity, -maxYawSpeed, maxYawSpeed);
@@ -782,7 +760,7 @@ export function createDrone(options = {}){
 
         drone.rotation.x = THREE.MathUtils.lerp(drone.rotation.x, targetPitch, tiltAlpha);
         drone.rotation.z = THREE.MathUtils.lerp(drone.rotation.z, targetRoll, tiltAlpha);
-        drone.position.y = ligado
+        drone.position.y = armsExpanded
             ? Math.sin(elapsedTime * 6.5) * 0.012 + Math.sin(elapsedTime * 13) * 0.004
             : THREE.MathUtils.lerp(drone.position.y, 0, tiltAlpha);
 
@@ -809,7 +787,7 @@ export function createDrone(options = {}){
         toggleArms,
         setDebugHelpersVisible,
         getTelemetry,
-        get ligado(){ return ligado; },
+        get ligado(){ return armsExpanded; },
         get armsExpanded(){ return armsExpanded; }
     };
 }
