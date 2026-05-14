@@ -602,6 +602,8 @@ export function createDrone(options = {}){
 
     const droneMovement = new THREE.Vector3();
     const droneVelocity = new THREE.Vector3();
+    const localVelocity = new THREE.Vector3();
+    const inverseDroneRigQuaternion = new THREE.Quaternion();
     let verticalVelocity = 0;
     let yawVelocity = 0;
     let pitchAngle = 0;
@@ -688,10 +690,21 @@ export function createDrone(options = {}){
     }
 
     function update(delta, elapsedTime){
-        const translationSpeed = 1.35;
-        const yawSpeed = 1.7;
+        const horizontalAcceleration = 3.4;
+        const maxHorizontalSpeed = 1.6;
+        const horizontalDamping = 1.9;
+        const verticalAcceleration = 2.6;
+        const maxVerticalSpeed = 1.1;
+        const verticalDamping = 2.2;
+        const yawAcceleration = 5.5;
+        const maxYawSpeed = 2.0;
+        const yawDamping = 4.0;
         const pitchSpeed = 1.25;
         const maxPitch = 0.65;
+        const motionPitch = 0.32;
+        const motionRoll = 0.32;
+        const yawRollAmount = 0.16;
+        const tiltResponse = 5.5;
         const armReadyThreshold = 0.995;
         const propellerSpeed = 24;
         const armTarget = armsExpanded ? 1 : 0;
@@ -704,43 +717,65 @@ export function createDrone(options = {}){
         if(rotorsFullyExtended){
             droneMovement.set(
                 Number(keys.positiveX) - Number(keys.negativeX),
-                Number(keys.positiveY) - Number(keys.negativeY),
+                0,
                 Number(keys.positiveZ) - Number(keys.negativeZ)
             );
 
             if(droneMovement.lengthSq() > 0){
                 droneMovement.normalize();
+                droneVelocity.addScaledVector(droneMovement, horizontalAcceleration * delta);
             }
 
-            droneVelocity.copy(droneMovement).multiplyScalar(translationSpeed);
-            droneRig.position.addScaledVector(droneVelocity, delta);
+            const verticalInput = Number(keys.positiveY) - Number(keys.negativeY);
+            verticalVelocity += verticalInput * verticalAcceleration * delta;
 
             const yawInput = Number(keys.yawPositive) - Number(keys.yawNegative);
+            yawVelocity += yawInput * yawAcceleration * delta;
+            yawVelocity = THREE.MathUtils.clamp(yawVelocity, -maxYawSpeed, maxYawSpeed);
+
             const pitchInput = Number(keys.pitchPositive) - Number(keys.pitchNegative);
-
-            yawVelocity = yawInput * yawSpeed;
-            droneRig.rotation.y += yawVelocity * delta;
-
             pitchAngle = THREE.MathUtils.clamp(
                 pitchAngle + pitchInput * pitchSpeed * delta,
                 -maxPitch,
                 maxPitch
             );
-
-            verticalVelocity = droneVelocity.y;
-        } else {
-            droneVelocity.set(0, 0, 0);
-            verticalVelocity = 0;
-            yawVelocity = 0;
-            pitchAngle = THREE.MathUtils.damp(pitchAngle, 0, 6, delta);
         }
+
+        yawVelocity *= Math.exp(-yawDamping * delta);
+        droneRig.rotation.y += yawVelocity * delta;
+
+        droneVelocity.x *= Math.exp(-horizontalDamping * delta);
+        droneVelocity.z *= Math.exp(-horizontalDamping * delta);
+        const horizontalSpeed = Math.hypot(droneVelocity.x, droneVelocity.z);
+        if(horizontalSpeed > maxHorizontalSpeed){
+            const scale = maxHorizontalSpeed / horizontalSpeed;
+            droneVelocity.x *= scale;
+            droneVelocity.z *= scale;
+        }
+
+        verticalVelocity *= Math.exp(-verticalDamping * delta);
+        verticalVelocity = THREE.MathUtils.clamp(verticalVelocity, -maxVerticalSpeed, maxVerticalSpeed);
+        droneVelocity.y = verticalVelocity;
+
+        droneRig.position.addScaledVector(droneVelocity, delta);
 
         if(droneRig.position.y < 0){
             droneRig.position.y = 0;
+            verticalVelocity = Math.max(verticalVelocity, 0);
         }
 
-        drone.rotation.x = pitchAngle;
-        drone.rotation.z = 0;
+        inverseDroneRigQuaternion.copy(droneRig.quaternion).invert();
+        localVelocity.copy(droneVelocity).applyQuaternion(inverseDroneRigQuaternion);
+
+        const speedPitch = THREE.MathUtils.clamp(localVelocity.z / maxHorizontalSpeed, -1, 1);
+        const speedRoll = THREE.MathUtils.clamp(localVelocity.x / maxHorizontalSpeed, -1, 1);
+        const yawRoll = THREE.MathUtils.clamp(yawVelocity / maxYawSpeed, -1, 1);
+        const targetPitch = pitchAngle + speedPitch * motionPitch;
+        const targetRoll = -speedRoll * motionRoll + yawRoll * yawRollAmount;
+        const tiltAlpha = Math.min(tiltResponse * delta, 1);
+
+        drone.rotation.x = THREE.MathUtils.lerp(drone.rotation.x, targetPitch, tiltAlpha);
+        drone.rotation.z = THREE.MathUtils.lerp(drone.rotation.z, targetRoll, tiltAlpha);
         drone.position.y = rotorsFullyExtended
             ? Math.sin(elapsedTime * 6.5) * 0.012 + Math.sin(elapsedTime * 13) * 0.004
             : THREE.MathUtils.damp(drone.position.y, 0, 6, delta);
