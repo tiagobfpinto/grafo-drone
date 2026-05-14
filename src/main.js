@@ -56,6 +56,7 @@ const mobileCameraDirection = new THREE.Vector3(0, -0.12, 1).normalize();
 
 let activeCamera = null;
 let helpersVisible = true;
+let wireframeVisible = false;
 
 sceneBounds.expandByObject(drone.rig);
 balloons.forEach(balloon => {
@@ -171,6 +172,15 @@ const cameraShortcuts = new Map([
     ["Numpad6", cameras.mobilePerspective]
 ]);
 
+    const applyWireframe = (object3D) => {
+        if (!object3D) return;
+        object3D.traverse((child) => {
+            if (child.isMesh && child.material) {
+                child.material.wireframe = window.isWireframe;
+            }
+        });
+    };
+
 window.addEventListener("keydown", (event) => {
     const selectedCamera = cameraShortcuts.get(event.code);
 
@@ -203,6 +213,26 @@ window.addEventListener("keydown", (event) => {
             axesStatusElement.textContent = helpersVisible ? "Eixos: ligados" : "Eixos: desligados";
         }
         event.preventDefault();
+        return;
+    }
+    if (event.code === "Digit7" || event.code === "Numpad7") {
+        if (typeof window.isWireframe === 'undefined') {
+            window.isWireframe = false;
+        }
+        window.isWireframe = !window.isWireframe;
+
+        // 1. Aplicar ao Drone (todas as suas peças)
+        applyWireframe(drone.rig);
+        // 2. Aplicar à Base/Pulseira
+        if (typeof strapData !== 'undefined') {
+            applyWireframe(strapData.group);
+        }
+        // 3. Aplicar a todos os Balões
+        if (typeof balloons !== 'undefined') {
+            balloons.forEach(balloon => applyWireframe(balloon));
+        }
+        event.preventDefault();
+        return;
     }
 });
 
