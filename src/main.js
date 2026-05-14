@@ -26,6 +26,9 @@ drone.bindInput();
 //Ballons
 const balloonHelpers = [];
 const balloons = []; 
+const droneWorldPosition = new THREE.Vector3();
+const balloonWorldPosition = new THREE.Vector3();
+const droneCollisionRadius = 0.6;
 for (let i = 0; i < 5; i++) {
     const balloonData = createBalloon();
     balloonHelpers.push(...balloonData.helpers);
@@ -34,6 +37,8 @@ for (let i = 0; i < 5; i++) {
         2.5 + Math.random() * 2, 
         (Math.random() - 0.5) * 4
     );
+    balloonData.group.userData.collisionRadius = 0.4;
+    balloonData.group.userData.popped = false;
     scene.add(balloonData.group);
     balloons.push(balloonData.group); 
 }
@@ -239,6 +244,25 @@ function setHelpersVisible(visible){
 
 setHelpersVisible(helpersVisible);
 
+function updateBalloonCollisions(){
+    drone.rig.getWorldPosition(droneWorldPosition);
+
+    balloons.forEach((balloon) => {
+        if(balloon.userData.popped){
+            return;
+        }
+
+        balloon.getWorldPosition(balloonWorldPosition);
+        const collisionDistance = droneCollisionRadius + balloon.userData.collisionRadius;
+
+        if(droneWorldPosition.distanceTo(balloonWorldPosition) <= collisionDistance){
+            balloon.userData.popped = true;
+            balloon.visible = false;
+            scene.remove(balloon);
+        }
+    });
+}
+
 window.addEventListener("resize", () => {
     Object.values(cameras).forEach(updateCameraProjection);
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -252,6 +276,7 @@ function animate() {
 
     const delta = clock.getDelta();
     drone.update(delta, clock.elapsedTime);
+    updateBalloonCollisions();
     controls.update();
 
     renderer.render(scene, activeCamera);

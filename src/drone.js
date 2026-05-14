@@ -588,25 +588,25 @@ export function createDrone(options = {}){
     addDebugHelper(droneRig, debugHelpers, 0.16);
 
     const keys = {
-        forward: false,
-        backward: false,
-        left: false,
-        right: false,
-        yawLeft: false,
-        yawRight: false,
-        up: false,
-        down: false
+        negativeX: false,
+        positiveX: false,
+        positiveY: false,
+        negativeY: false,
+        positiveZ: false,
+        negativeZ: false,
+        yawPositive: false,
+        yawNegative: false,
+        pitchPositive: false,
+        pitchNegative: false
     };
 
     const droneMovement = new THREE.Vector3();
     const droneVelocity = new THREE.Vector3();
-    const localVelocity = new THREE.Vector3();
-    const inverseDroneRigQuaternion = new THREE.Quaternion();
     let verticalVelocity = 0;
     let yawVelocity = 0;
+    let pitchAngle = 0;
     let armsExpanded = true;
     let armExtension = 1;
-    let propellerCurrentSpeed = 0;
     let dashboardAccumulator = 1;
 
     function getTelemetry(){
@@ -624,8 +624,8 @@ export function createDrone(options = {}){
     function updateStatus(){
         if(!statusElement) return;
         const droneState = armsExpanded ? "ligado" : "desligado";
-        const armState = armsExpanded ? "expandidos" : "retraidos";
-        statusElement.textContent = `Estado: ${droneState} | Bracos: ${armState}`;
+        const rotorState = armsExpanded ? "estendidos" : "recolhidos";
+        statusElement.textContent = `Estado: ${droneState} | Rotores: ${rotorState}`;
     }
 
     function updateArmTransforms(){
@@ -657,18 +657,17 @@ export function createDrone(options = {}){
         let handled = true;
 
         switch(event.code){
-            case "KeyW": keys.forward = isPressed; break;
-            case "KeyS": keys.backward = isPressed; break;
-            case "KeyA": keys.left = isPressed; break;
-            case "KeyD": keys.right = isPressed; break;
-            case "KeyQ": keys.yawLeft = isPressed; break;
-            case "KeyE": keys.yawRight = isPressed; break;
-            case "Space": keys.up = isPressed; break;
-            case "ShiftLeft":
-            case "ShiftRight":
-                keys.down = isPressed;
-                break;
-            case "KeyT":
+            case "KeyA": keys.negativeX = isPressed; break;
+            case "KeyD": keys.positiveX = isPressed; break;
+            case "KeyW": keys.positiveY = isPressed; break;
+            case "KeyS": keys.negativeY = isPressed; break;
+            case "KeyU": keys.positiveZ = isPressed; break;
+            case "KeyJ": keys.negativeZ = isPressed; break;
+            case "KeyI": keys.yawPositive = isPressed; break;
+            case "KeyK": keys.yawNegative = isPressed; break;
+            case "KeyO": keys.pitchPositive = isPressed; break;
+            case "KeyL": keys.pitchNegative = isPressed; break;
+            case "KeyQ":
                 if(isPressed && !event.repeat){
                     toggleArms();
                 }
@@ -689,84 +688,68 @@ export function createDrone(options = {}){
     }
 
     function update(delta, elapsedTime){
-        const yawAcceleration = 5.2;
-        const maxYawSpeed = 2.0;
-        const yawDamping = 4.0;
-        const movementAcceleration = 3.2;
-        const maxHorizontalSpeed = 1.25;
-        const horizontalDamping = 1.9;
-        const altitudeAcceleration = 2.4;
-        const maxVerticalSpeed = 0.95;
-        const verticalDamping = 2.4;
-        const maxPitch = 0.26;
-        const maxRoll = 0.28;
-        const yawRollAmount = 0.14;
-        const tiltResponse = 5.5;
-        const targetPropellerSpeed = armsExpanded ? 22 : 0;
+        const translationSpeed = 1.35;
+        const yawSpeed = 1.7;
+        const pitchSpeed = 1.25;
+        const maxPitch = 0.65;
+        const armReadyThreshold = 0.995;
+        const propellerSpeed = 24;
         const armTarget = armsExpanded ? 1 : 0;
 
         armExtension = THREE.MathUtils.damp(armExtension, armTarget, 7, delta);
         updateArmTransforms();
 
-        propellerCurrentSpeed += (targetPropellerSpeed - propellerCurrentSpeed) * Math.min(delta * 5, 1);
+        const rotorsFullyExtended = armsExpanded && armExtension >= armReadyThreshold;
 
-        if(armsExpanded){
-            const yawInput = Number(keys.yawLeft) - Number(keys.yawRight);
-            yawVelocity += yawInput * yawAcceleration * delta;
-            yawVelocity = THREE.MathUtils.clamp(yawVelocity, -maxYawSpeed, maxYawSpeed);
-
+        if(rotorsFullyExtended){
             droneMovement.set(
-                Number(keys.right) - Number(keys.left),
-                0,
-                Number(keys.forward) - Number(keys.backward)
+                Number(keys.positiveX) - Number(keys.negativeX),
+                Number(keys.positiveY) - Number(keys.negativeY),
+                Number(keys.positiveZ) - Number(keys.negativeZ)
             );
 
             if(droneMovement.lengthSq() > 0){
                 droneMovement.normalize();
-                droneMovement.applyQuaternion(droneRig.quaternion);
-                droneVelocity.addScaledVector(droneMovement, movementAcceleration * delta);
             }
 
-            const verticalInput = Number(keys.up) - Number(keys.down);
-            verticalVelocity += verticalInput * altitudeAcceleration * delta;
+            droneVelocity.copy(droneMovement).multiplyScalar(translationSpeed);
+            droneRig.position.addScaledVector(droneVelocity, delta);
+
+            const yawInput = Number(keys.yawPositive) - Number(keys.yawNegative);
+            const pitchInput = Number(keys.pitchPositive) - Number(keys.pitchNegative);
+
+            yawVelocity = yawInput * yawSpeed;
+            droneRig.rotation.y += yawVelocity * delta;
+
+            pitchAngle = THREE.MathUtils.clamp(
+                pitchAngle + pitchInput * pitchSpeed * delta,
+                -maxPitch,
+                maxPitch
+            );
+
+            verticalVelocity = droneVelocity.y;
+        } else {
+            droneVelocity.set(0, 0, 0);
+            verticalVelocity = 0;
+            yawVelocity = 0;
+            pitchAngle = THREE.MathUtils.damp(pitchAngle, 0, 6, delta);
         }
 
-        yawVelocity *= Math.exp(-yawDamping * delta);
-        droneRig.rotation.y += yawVelocity * delta;
-
-        droneVelocity.multiplyScalar(Math.exp(-horizontalDamping * delta));
-        if(droneVelocity.length() > maxHorizontalSpeed){
-            droneVelocity.setLength(maxHorizontalSpeed);
-        }
-        droneRig.position.addScaledVector(droneVelocity, delta);
-
-        verticalVelocity *= Math.exp(-verticalDamping * delta);
-        verticalVelocity = THREE.MathUtils.clamp(verticalVelocity, -maxVerticalSpeed, maxVerticalSpeed);
-        droneRig.position.y += verticalVelocity * delta;
         if(droneRig.position.y < 0){
             droneRig.position.y = 0;
-            verticalVelocity = Math.max(verticalVelocity, 0);
         }
 
-        inverseDroneRigQuaternion.copy(droneRig.quaternion).invert();
-        localVelocity.copy(droneVelocity).applyQuaternion(inverseDroneRigQuaternion);
-
-        const speedPitch = THREE.MathUtils.clamp(localVelocity.z / maxHorizontalSpeed, -1, 1);
-        const speedRoll = THREE.MathUtils.clamp(localVelocity.x / maxHorizontalSpeed, -1, 1);
-        const yawRoll = THREE.MathUtils.clamp(yawVelocity / maxYawSpeed, -1, 1);
-        const targetPitch = speedPitch * maxPitch;
-        const targetRoll = -speedRoll * maxRoll + yawRoll * yawRollAmount;
-        const tiltAlpha = Math.min(tiltResponse * delta, 1);
-
-        drone.rotation.x = THREE.MathUtils.lerp(drone.rotation.x, targetPitch, tiltAlpha);
-        drone.rotation.z = THREE.MathUtils.lerp(drone.rotation.z, targetRoll, tiltAlpha);
-        drone.position.y = armsExpanded
+        drone.rotation.x = pitchAngle;
+        drone.rotation.z = 0;
+        drone.position.y = rotorsFullyExtended
             ? Math.sin(elapsedTime * 6.5) * 0.012 + Math.sin(elapsedTime * 13) * 0.004
-            : THREE.MathUtils.lerp(drone.position.y, 0, tiltAlpha);
+            : THREE.MathUtils.damp(drone.position.y, 0, 6, delta);
 
         propellers.forEach((propeller, index) => {
             const direction = index % 2 === 0 ? 1 : -1;
-            propeller.rotation.y += propellerCurrentSpeed * delta * direction;
+            if(rotorsFullyExtended){
+                propeller.rotation.y += propellerSpeed * delta * direction;
+            }
         });
 
         dashboardAccumulator += delta;
