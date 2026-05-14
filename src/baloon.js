@@ -29,7 +29,7 @@ export function createBalloon(radius = 0.35, widthSegments = 8, heightSegments =
         new THREE.SphereGeometry(safeRadius, safeWidthSegments, safeHeightSegments),
         balloonMaterial
     );
-    const hBody = new THREE.AxesHelper(safeRadius * 1.5);
+    const hBody = new THREE.AxesHelper(safeRadius * 0.45);
     body.add(hBody);
     helpers.push(hBody);
 
@@ -42,7 +42,7 @@ export function createBalloon(radius = 0.35, widthSegments = 8, heightSegments =
     knot.rotation.x = Math.PI;
     knot.position.y = -(safeRadius + knotHeight / 2 - 0.02); // Posição ajustada para a esfera
     
-    const hKnot = new THREE.AxesHelper(safeRadius * 0.8);
+    const hKnot = new THREE.AxesHelper(safeRadius * 0.32);
     knot.add(hKnot);
     helpers.push(hKnot);
 
@@ -58,7 +58,7 @@ export function createBalloon(radius = 0.35, widthSegments = 8, heightSegments =
         );
         string.position.y = knot.position.y - knotHeight / 2 - safeStringSize / 2;
         
-        const hString = new THREE.AxesHelper(safeRadius * 0.8);
+        const hString = new THREE.AxesHelper(safeRadius * 0.32);
         string.add(hString);
         helpers.push(hString);
 

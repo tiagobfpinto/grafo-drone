@@ -255,7 +255,7 @@ function createPropeller(propellers, debugHelpers){
     propeller.add(hub);
     propeller.add(cap);
     propellers.push(propeller);
-    addDebugHelper(propeller, debugHelpers, 0.14);
+    addDebugHelper(propeller, debugHelpers, 0.08);
 
     return propeller;
 }
@@ -299,7 +299,7 @@ function createTurbine(propellers, debugHelpers, labelIndex){
     turbine.add(label);
     turbine.add(mast);
     turbine.add(propeller);
-    addDebugHelper(turbine, debugHelpers, 0.18);
+    addDebugHelper(turbine, debugHelpers, 0.1);
 
     return turbine;
 }
@@ -365,7 +365,7 @@ function createDeployableArm(config, propellers, debugHelpers){
     arm.add(hinge);
     arm.add(sleeve);
     arm.add(slideGroup);
-    addDebugHelper(arm, debugHelpers, 0.18);
+    addDebugHelper(arm, debugHelpers, 0.12);
 
     return {
         root: arm,
@@ -436,7 +436,7 @@ function createDisplayAssembly(debugHelpers){
         displayAssembly.add(screw);
     });
 
-    addDebugHelper(displayAssembly, debugHelpers, 0.16);
+    addDebugHelper(displayAssembly, debugHelpers, 0.1);
 
     return {
         group: displayAssembly,
@@ -466,7 +466,7 @@ function createBottomButton(debugHelpers){
     buttonGroup.add(buttonBase);
     buttonGroup.add(grille);
     buttonGroup.add(lowerGroove);
-    addDebugHelper(buttonGroup, debugHelpers, 0.14);
+    addDebugHelper(buttonGroup, debugHelpers, 0.08);
 
     return buttonGroup;
 }
@@ -526,8 +526,8 @@ function buildDroneBody(debugHelpers){
     droneBody.add(frontCameraGroup);
     droneBody.add(bottomButton);
 
-    addDebugHelper(droneBody, debugHelpers, 0.22);
-    addDebugHelper(frontCameraGroup, debugHelpers, 0.12);
+    addDebugHelper(droneBody, debugHelpers, 0.14);
+    addDebugHelper(frontCameraGroup, debugHelpers, 0.08);
 
     return {
         group: droneBody,
@@ -585,7 +585,7 @@ export function createDrone(options = {}){
     });
 
     droneRig.add(drone);
-    addDebugHelper(droneRig, debugHelpers, 0.28);
+    addDebugHelper(droneRig, debugHelpers, 0.16);
 
     const keys = {
         forward: false,

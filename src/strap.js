@@ -33,15 +33,15 @@ export function createStrap() {
     baseGroup.add(padMesh);
 
     // 3. Adicionar os AxesHelper a cada peça (Exigência do Guião)
-    const hGroup = new THREE.AxesHelper(1.0);
+    const hGroup = new THREE.AxesHelper(0.25);
     baseGroup.add(hGroup);
     baseHelpers.push(hGroup);
 
-    const hStrap = new THREE.AxesHelper(0.8);
+    const hStrap = new THREE.AxesHelper(0.18);
     strapMesh.add(hStrap);
     baseHelpers.push(hStrap);
 
-    const hPad = new THREE.AxesHelper(0.6);
+    const hPad = new THREE.AxesHelper(0.16);
     padMesh.add(hPad);
     baseHelpers.push(hPad);
 
