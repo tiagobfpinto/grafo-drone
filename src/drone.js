@@ -370,6 +370,7 @@ function createDeployableArm(config, propellers, debugHelpers){
     return {
         root: arm,
         slideGroup,
+        turbine,
         baseAngle: config.angle,
         foldedAngle: config.angle + Math.PI
     };
@@ -578,10 +579,12 @@ export function createDrone(options = {}){
         }
     ];
 
+    const rotors = [];
     armConfigs.forEach((config) => {
         const deployableArm = createDeployableArm(config, propellers, debugHelpers);
         deployableArms.push(deployableArm);
         drone.add(deployableArm.root);
+        rotors.push(deployableArm.turbine);
     });
 
     droneRig.add(drone);
@@ -599,6 +602,8 @@ export function createDrone(options = {}){
         pitchPositive: false,
         pitchNegative: false
     };
+
+    let inputBlocked = false;
 
     const droneMovement = new THREE.Vector3();
     const droneVelocity = new THREE.Vector3();
@@ -656,6 +661,11 @@ export function createDrone(options = {}){
     }
 
     function setKey(event, isPressed){
+        if(inputBlocked){
+            event.preventDefault();
+            return;
+        }
+
         let handled = true;
 
         switch(event.code){
@@ -796,14 +806,23 @@ export function createDrone(options = {}){
 
     updateArmTransforms();
 
+    function setInputBlocked(blocked){
+        inputBlocked = blocked;
+        if(blocked){
+            Object.keys(keys).forEach(k => keys[k] = false);
+        }
+    }
+
     return {
         rig: droneRig,
         mobileCameraMount,
         debugHelpers,
+        rotors,
         update,
         bindInput,
         toggleArms,
         setDebugHelpersVisible,
+        setInputBlocked,
         getTelemetry,
         get ligado(){ return armsExpanded; },
         get armsExpanded(){ return armsExpanded; }

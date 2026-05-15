@@ -27,10 +27,12 @@ drone.bindInput();
 
 //Ballons
 const balloonHelpers = [];
-const balloons = []; 
-const droneWorldPosition = new THREE.Vector3();
+const balloons = [];
+const rotorWorldPosition = new THREE.Vector3();
 const balloonWorldPosition = new THREE.Vector3();
-const droneCollisionRadius = 0.6;
+const rotorCollisionRadius = 0.30;
+const poppingBalloons = [];
+let collisionAnimating = false;
 for (let i = 0; i < 5; i++) {
     const balloonData = createBalloon();
     balloonHelpers.push(...balloonData.helpers);
@@ -228,6 +230,11 @@ gui.add(guiParams, 'wireframe').name('Wireframe').onChange((value) => {
 });
 
 window.addEventListener("keydown", (event) => {
+    if(collisionAnimating){
+        event.preventDefault();
+        return;
+    }
+
     const keyElement = document.getElementById(event.code);
     if (keyElement) {
         keyElement.classList.add('active');
@@ -297,21 +304,58 @@ function setHelpersVisible(visible){
 
 setHelpersVisible(helpersVisible);
 
-function updateBalloonCollisions(){
-    drone.rig.getWorldPosition(droneWorldPosition);
-
-    balloons.forEach((balloon) => {
-        if(balloon.userData.popped){
-            return;
+function startPopAnimation(balloon){
+    balloon.userData.popped = true;
+    balloon.traverse((child) => {
+        if(child.isMesh && child.material){
+            child.material = child.material.clone();
+            child.material.transparent = true;
+            child.material.opacity = 1;
         }
+    });
+    poppingBalloons.push({ balloon, elapsed: 0, duration: 0.5 });
+    collisionAnimating = true;
+    drone.setInputBlocked(true);
+}
+
+function updatePopAnimations(delta){
+    for(let i = poppingBalloons.length - 1; i >= 0; i--){
+        const pop = poppingBalloons[i];
+        pop.elapsed += delta;
+        const t = Math.min(pop.elapsed / pop.duration, 1);
+
+        pop.balloon.scale.setScalar(1 + t * 0.9);
+        pop.balloon.traverse((child) => {
+            if(child.isMesh && child.material){
+                child.material.opacity = 1 - t;
+            }
+        });
+
+        if(t >= 1){
+            scene.remove(pop.balloon);
+            poppingBalloons.splice(i, 1);
+        }
+    }
+
+    if(poppingBalloons.length === 0 && collisionAnimating){
+        collisionAnimating = false;
+        drone.setInputBlocked(false);
+    }
+}
+
+function updateBalloonCollisions(){
+    balloons.forEach((balloon) => {
+        if(balloon.userData.popped) return;
 
         balloon.getWorldPosition(balloonWorldPosition);
-        const collisionDistance = droneCollisionRadius + balloon.userData.collisionRadius;
+        const collisionDistance = rotorCollisionRadius + balloon.userData.collisionRadius;
 
-        if(droneWorldPosition.distanceTo(balloonWorldPosition) <= collisionDistance){
-            balloon.userData.popped = true;
-            balloon.visible = false;
-            scene.remove(balloon);
+        for(const rotor of drone.rotors){
+            rotor.getWorldPosition(rotorWorldPosition);
+            if(rotorWorldPosition.distanceTo(balloonWorldPosition) <= collisionDistance){
+                startPopAnimation(balloon);
+                return;
+            }
         }
     });
 }
@@ -330,6 +374,7 @@ function animate() {
     const delta = clock.getDelta();
     drone.update(delta, clock.elapsedTime);
     updateBalloonCollisions();
+    updatePopAnimations(delta);
     controls.update();
 
     renderer.render(scene, activeCamera);
