@@ -23,21 +23,42 @@
       line-height: 1.45;
       z-index: 10;
     }
+
+    /* Estilos para as teclas do HUD */
+    .key {
+      display: inline-block;
+      background: #444;
+      padding: 1px 6px;
+      margin: 1px 0;
+      border-radius: 4px;
+      font-family: monospace;
+      border: 1px solid #666;
+      transition: background 0.1s, color 0.1s;
+    }
+
+    /* Classe que será adicionada via JavaScript quando a tecla for premida */
+    .key.active {
+      background: #f08a12; /* Cor laranja do teu DroneWatch */
+      color: #111;
+      font-weight: bold;
+      border-color: #f08a12;
+    }
   </style>
 </head>
 <body>
   <div id="info">
     <strong>Controlos</strong><br>
-    Mouse: rodar / zoom / mover camara<br>
-    Q: estender / recolher rotores<br>
-    A / D: deslocamento X<br>
-    W / S: deslocamento Y<br>
-    U / J: deslocamento Z<br>
-    I / K: yaw<br>
-    O / L: pitch<br>
-    1 / 2 / 3: topo / lateral / frontal<br>
-    4 / 5 / 6: fixa ortografica / fixa perspectiva / movel<br>
-    H: mostrar / ocultar helpers<br>
+    <span id="KeyQ" class="key">Q</span>: estender / recolher rotores<br>
+    <span id="KeyA" class="key">A</span> / <span id="KeyD" class="key">D</span>: deslocamento X<br>
+    <span id="KeyW" class="key">W</span> / <span id="KeyS" class="key">S</span>: deslocamento Y<br>
+    <span id="KeyU" class="key">U</span> / <span id="KeyJ" class="key">J</span>: deslocamento Z<br>
+    <span id="KeyI" class="key">I</span> / <span id="KeyK" class="key">K</span>: yaw<br>
+    <span id="KeyO" class="key">O</span> / <span id="KeyL" class="key">L</span>: pitch<br>
+    <span id="Digit1" class="key">1</span> / <span id="Digit2" class="key">2</span> / <span id="Digit3" class="key">3</span>: câmaras fixas<br>
+    <span id="Digit4" class="key">4</span> / <span id="Digit5" class="key">5</span> / <span id="Digit6" class="key">6</span>: câmaras de cena<br>
+    <span id="KeyH" class="key">H</span>: mostrar / ocultar helpers<br>
+    <span id="Digit7" class="key">7</span>: ligar / desligar wireframe<br>
+    <hr style="border: 0; border-top: 1px solid #555; margin: 8px 0;">
     <span id="drone-status">Estado: ligado | Rotores: estendidos</span>
   </div>
 
