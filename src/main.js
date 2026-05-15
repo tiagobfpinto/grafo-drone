@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import Stats from 'three/addons/libs/stats.module.js';         
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { createDrone } from './drone.js';
 import { createBalloon } from './baloon.js';
 import { createStrap } from './strap.js';
@@ -186,7 +188,51 @@ const cameraShortcuts = new Map([
         });
     };
 
+// 1. Inicializar Stats (FPS)
+const stats = new Stats();
+stats.dom.style.position = 'absolute';
+stats.dom.style.left = 'auto'; // Remove o alinhamento à esquerda
+stats.dom.style.right = '0px'; // Encosta ao lado direito
+stats.dom.style.top = '0px';   // Fica bem no topo
+document.body.appendChild(stats.dom);
+
+// 2. Refatoração da função global de wireframe
+function setWireframeVisible(visible) {
+    window.isWireframe = visible;
+    applyWireframe(drone.rig);
+    if (typeof strapData !== 'undefined') applyWireframe(strapData.group);
+    if (typeof balloons !== 'undefined') balloons.forEach(b => applyWireframe(b));
+}
+
+// 3. Inicializar GUI
+const gui = new GUI({ title: 'Grafo de Cena' }); 
+
+// Empurrar o painel para baixo para dar espaço aos FPS (que ocupam ~48px)
+gui.domElement.style.position = 'absolute';
+gui.domElement.style.top = '0px'; 
+gui.domElement.style.right = '100px';
+
+const guiParams = {
+    helpers: helpersVisible,
+    wireframe: false
+};
+
+// Adicionar as opções DIRETAMENTE ao painel principal em vez de usar .addFolder()
+gui.add(guiParams, 'helpers').name('Mostrar Eixos').onChange((value) => {
+    helpersVisible = value;
+    setHelpersVisible(value);
+});
+
+gui.add(guiParams, 'wireframe').name('Wireframe').onChange((value) => {
+    setWireframeVisible(value);
+});
+
 window.addEventListener("keydown", (event) => {
+    const keyElement = document.getElementById(event.code);
+    if (keyElement) {
+        keyElement.classList.add('active');
+    }
+
     const selectedCamera = cameraShortcuts.get(event.code);
 
     if(selectedCamera){
@@ -220,6 +266,13 @@ window.addEventListener("keydown", (event) => {
         }
         event.preventDefault();
         return;
+    }
+});
+
+window.addEventListener("keyup", (event) => {
+    const keyElement = document.getElementById(event.code);
+    if (keyElement) {
+        keyElement.classList.remove('active');
     }
 });
 
@@ -280,6 +333,7 @@ function animate() {
     controls.update();
 
     renderer.render(scene, activeCamera);
+    stats.update();
 }
 
 animate();
